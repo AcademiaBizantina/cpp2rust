@@ -1,0 +1,29 @@
+name: Format Check
+
+on: [pull_request]
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup LLVM 22
+        uses: ZhongRuoyu/setup-llvm@v0
+        with:
+          llvm-version: 22
+
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.94.0
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Check C++ formatting
+        run: find cpp2rust tests -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror
+
+      - name: Check Rust formatting
+        run: |
+          cargo fmt --manifest-path rules/Cargo.toml -- --check
+          cargo fmt --manifest-path rule_preprocessor/Cargo.toml -- --check
+          cargo fmt --manifest-path libcc2rs/Cargo.toml -- --check

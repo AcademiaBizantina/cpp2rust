@@ -1,0 +1,174 @@
+{
+  "f1": {
+    "body": [
+      {
+        "placeholder": {
+          "arg": "a0",
+          "access": "read"
+        }
+      }
+    ],
+    "params": {
+      "a0": {
+        "type": "usize"
+      },
+      "a1": {
+        "type": "usize"
+      }
+    },
+    "return_type": {
+      "type": "usize"
+    }
+  },
+  "f2": {
+    "body": [
+      {
+        "method_call": {
+          "receiver": [
+            {
+              "placeholder": {
+                "arg": "a0",
+                "access": "read"
+              }
+            }
+          ],
+          "body": [
+            {
+              "text": ".trailing_zeros()"
+            }
+          ]
+        }
+      },
+      {
+        "text": " as i32"
+      }
+    ],
+    "params": {
+      "a0": {
+        "type": "u32"
+      }
+    },
+    "return_type": {
+      "type": "i32"
+    }
+  },
+  "f3": {
+    "body": [
+      {
+        "method_call": {
+          "receiver": [
+            {
+              "placeholder": {
+                "arg": "a0",
+                "access": "read"
+              }
+            }
+          ],
+          "body": [
+            {
+              "text": ".leading_zeros()"
+            }
+          ]
+        }
+      },
+      {
+        "text": " as i32"
+      }
+    ],
+    "params": {
+      "a0": {
+        "type": "u32"
+      }
+    },
+    "return_type": {
+      "type": "i32"
+    }
+  },
+  "f4": {
+    "body": [
+      {
+        "method_call": {
+          "receiver": [
+            {
+              "placeholder": {
+                "arg": "a0",
+                "access": "read"
+              }
+            }
+          ],
+          "body": [
+            {
+              "text": ".swap_bytes()"
+            }
+          ]
+        }
+      }
+    ],
+    "params": {
+      "a0": {
+        "type": "u16"
+      }
+    },
+    "return_type": {
+      "type": "u16"
+    }
+  },
+  "f5": {
+    "body": [
+      {
+        "method_call": {
+          "receiver": [
+            {
+              "placeholder": {
+                "arg": "a0",
+                "access": "read"
+              }
+            }
+          ],
+          "body": [
+            {
+              "text": ".swap_bytes()"
+            }
+          ]
+        }
+      }
+    ],
+    "params": {
+      "a0": {
+        "type": "u32"
+      }
+    },
+    "return_type": {
+      "type": "u32"
+    }
+  },
+  "f6": {
+    "body": [
+      {
+        "method_call": {
+          "receiver": [
+            {
+              "placeholder": {
+                "arg": "a0",
+                "access": "read"
+              }
+            }
+          ],
+          "body": [
+            {
+              "text": ".swap_bytes()"
+            }
+          ]
+        }
+      }
+    ],
+    "params": {
+      "a0": {
+        "type": "u64"
+      }
+    },
+    "return_type": {
+      "type": "u64"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+# CMake
+build/
+
+# Cargo
+target/
+Cargo.lock
+
+# Python
+*.pyc
+__pycache__
+
+# VSCode
+.vscode
+
+# Clangd
+.cache/
+
+tmp
+*.swp
+
+# Merge/rebase conflict artifacts
+*.orig
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+
+# Integration tests
+tests/cpp2rust-tests/

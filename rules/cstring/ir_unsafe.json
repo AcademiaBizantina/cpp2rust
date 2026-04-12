@@ -1,0 +1,316 @@
+{
+  "f1": {
+    "body": [
+      {
+        "text": "if "
+      },
+      {
+        "placeholder": {
+          "arg": "a2",
+          "access": "read"
+        }
+      },
+      {
+        "text": " != 0 {\n        ::std::ptr::copy_nonoverlapping("
+      },
+      {
+        "placeholder": {
+          "arg": "a1",
+          "access": "read"
+        }
+      },
+      {
+        "text": ", "
+      },
+      {
+        "placeholder": {
+          "arg": "a0",
+          "access": "read"
+        }
+      },
+      {
+        "text": ", "
+      },
+      {
+        "placeholder": {
+          "arg": "a2",
+          "access": "read"
+        }
+      },
+      {
+        "text": " as usize)\n    }\n    "
+      },
+      {
+        "placeholder": {
+          "arg": "a0",
+          "access": "read"
+        }
+      }
+    ],
+    "multi_statement": true,
+    "params": {
+      "a0": {
+        "type": "*mut u8",
+        "is_unsafe_pointer": true
+      },
+      "a1": {
+        "type": "*const u8",
+        "is_unsafe_pointer": true
+      },
+      "a2": {
+        "type": "usize"
+      }
+    },
+    "return_type": {
+      "type": "*mut u8",
+      "is_unsafe_pointer": true
+    }
+  },
+  "f2": {
+    "body": [
+      {
+        "text": "let byte_0 = "
+      },
+      {
+        "placeholder": {
+          "arg": "a0",
+          "access": "read"
+        }
+      },
+      {
+        "text": " as *mut u8;\n    for offset in 0.."
+      },
+      {
+        "placeholder": {
+          "arg": "a2",
+          "access": "read"
+        }
+      },
+      {
+        "text": " {\n        *"
+      },
+      {
+        "method_call": {
+          "receiver": [
+            {
+              "text": "byte_0"
+            }
+          ],
+          "body": [
+            {
+              "text": ".offset(offset as isize)"
+            }
+          ]
+        }
+      },
+      {
+        "text": " = "
+      },
+      {
+        "placeholder": {
+          "arg": "a1",
+          "access": "read"
+        }
+      },
+      {
+        "text": " as u8;\n    }\n    "
+      },
+      {
+        "placeholder": {
+          "arg": "a0",
+          "access": "read"
+        }
+      }
+    ],
+    "multi_statement": true,
+    "params": {
+      "a0": {
+        "type": "*mut u8",
+        "is_unsafe_pointer": true
+      },
+      "a1": {
+        "type": "*const u8",
+        "is_unsafe_pointer": true
+      },
+      "a2": {
+        "type": "usize"
+      }
+    },
+    "return_type": {
+      "type": "*mut u8",
+      "is_unsafe_pointer": true
+    }
+  },
+  "f3": {
+    "body": [
+      {
+        "text": "let sa = core::slice::from_raw_parts("
+      },
+      {
+        "placeholder": {
+          "arg": "a0",
+          "access": "read"
+        }
+      },
+      {
+        "text": " as *const u8, "
+      },
+      {
+        "placeholder": {
+          "arg": "a2",
+          "access": "read"
+        }
+      },
+      {
+        "text": " as usize);\n    let sb = core::slice::from_raw_parts("
+      },
+      {
+        "placeholder": {
+          "arg": "a1",
+          "access": "read"
+        }
+      },
+      {
+        "text": " as *const u8, "
+      },
+      {
+        "placeholder": {
+          "arg": "a2",
+          "access": "read"
+        }
+      },
+      {
+        "text": " as usize);\n    let mut diff = 0_i32;\n    for (x, y) in "
+      },
+      {
+        "method_call": {
+          "receiver": [
+            {
+              "method_call": {
+                "receiver": [
+                  {
+                    "text": "sa"
+                  }
+                ],
+                "body": [
+                  {
+                    "text": ".iter()"
+                  }
+                ]
+              }
+            }
+          ],
+          "body": [
+            {
+              "text": ".zip("
+            },
+            {
+              "method_call": {
+                "receiver": [
+                  {
+                    "text": "sb"
+                  }
+                ],
+                "body": [
+                  {
+                    "text": ".iter()"
+                  }
+                ]
+              }
+            },
+            {
+              "text": ")"
+            }
+          ]
+        }
+      },
+      {
+        "text": " {\n        if x != y {\n            diff = (*x as i32) - (*y as i32);\n            break;\n        }\n    }\n    diff"
+      }
+    ],
+    "multi_statement": true,
+    "params": {
+      "a0": {
+        "type": "*const u8",
+        "is_unsafe_pointer": true
+      },
+      "a1": {
+        "type": "*const u8",
+        "is_unsafe_pointer": true
+      },
+      "a2": {
+        "type": "usize"
+      }
+    },
+    "return_type": {
+      "type": "i32"
+    }
+  },
+  "f4": {
+    "body": [
+      {
+        "text": "if "
+      },
+      {
+        "placeholder": {
+          "arg": "a2",
+          "access": "read"
+        }
+      },
+      {
+        "text": " != 0 {\n        ::std::ptr::copy_nonoverlapping("
+      },
+      {
+        "placeholder": {
+          "arg": "a1",
+          "access": "read"
+        }
+      },
+      {
+        "text": ", "
+      },
+      {
+        "placeholder": {
+          "arg": "a0",
+          "access": "read"
+        }
+      },
+      {
+        "text": ", "
+      },
+      {
+        "placeholder": {
+          "arg": "a2",
+          "access": "read"
+        }
+      },
+      {
+        "text": " as usize)\n    }\n    "
+      },
+      {
+        "placeholder": {
+          "arg": "a0",
+          "access": "read"
+        }
+      }
+    ],
+    "multi_statement": true,
+    "params": {
+      "a0": {
+        "type": "*mut u8",
+        "is_unsafe_pointer": true
+      },
+      "a1": {
+        "type": "*const u8",
+        "is_unsafe_pointer": true
+      },
+      "a2": {
+        "type": "usize"
+      }
+    },
+    "return_type": {
+      "type": "*mut u8",
+      "is_unsafe_pointer": true
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "f1": {
+    "body": [
+      {
+        "placeholder": {
+          "arg": "a0",
+          "access": "read"
+        }
+      }
+    ],
+    "params": {
+      "a0": {
+        "type": "i32"
+      }
+    },
+    "return_type": {
+      "type": "i32"
+    }
+  }
+}

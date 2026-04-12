@@ -1,0 +1,60 @@
+name: Run tests
+
+on: [pull_request]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        build_type: [Debug, Release]
+        test:
+          - name: unit-tests
+            target: check
+          - name: benchmarks (skip-run)
+            target: check-benchmarks
+            skip_run: "1"
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.test.name }} (${{ matrix.os }}, ${{ matrix.build_type }})
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup LLVM 22
+        uses: ZhongRuoyu/setup-llvm@v0
+        with:
+          llvm-version: 22
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y python3-tomli
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          pip3 install tomli --break-system-packages
+
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.94.0
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+                -DLIT_FLAGS="-v" \
+                -GNinja ..
+
+      - name: Build
+        run: ninja
+        working-directory: build
+
+      - name: Run tests
+        run: ninja ${{ matrix.test.target }}
+        working-directory: build
+        env:
+          SKIP_RUN: ${{ matrix.test.skip_run }}

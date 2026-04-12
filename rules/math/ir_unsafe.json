@@ -1,0 +1,89 @@
+{
+  "f1": {
+    "body": [
+      {
+        "method_call": {
+          "receiver": [
+            {
+              "placeholder": {
+                "arg": "a0",
+                "access": "read"
+              }
+            }
+          ],
+          "body": [
+            {
+              "text": ".cos()"
+            }
+          ]
+        }
+      }
+    ],
+    "params": {
+      "a0": {
+        "type": "f64"
+      }
+    },
+    "return_type": {
+      "type": "f64"
+    }
+  },
+  "f2": {
+    "body": [
+      {
+        "method_call": {
+          "receiver": [
+            {
+              "placeholder": {
+                "arg": "a0",
+                "access": "read"
+              }
+            }
+          ],
+          "body": [
+            {
+              "text": ".round()"
+            }
+          ]
+        }
+      }
+    ],
+    "params": {
+      "a0": {
+        "type": "f64"
+      }
+    },
+    "return_type": {
+      "type": "f64"
+    }
+  },
+  "f3": {
+    "body": [
+      {
+        "method_call": {
+          "receiver": [
+            {
+              "placeholder": {
+                "arg": "a0",
+                "access": "read"
+              }
+            }
+          ],
+          "body": [
+            {
+              "text": ".sin()"
+            }
+          ]
+        }
+      }
+    ],
+    "params": {
+      "a0": {
+        "type": "f64"
+      }
+    },
+    "return_type": {
+      "type": "f64"
+    }
+  }
+}

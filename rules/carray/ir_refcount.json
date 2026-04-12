@@ -1,0 +1,10 @@
+{
+  "t1": {
+    "init": "Box::new([Default::default()])",
+    "type": "Box<[Value<Box<[T1]>>]>"
+  },
+  "t2": {
+    "init": "Box::new([Default::default()])",
+    "type": "Box<[Value<Box<[Value<Box<[T1]>>]>>]>"
+  }
+}

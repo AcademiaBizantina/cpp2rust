@@ -1,0 +1,9 @@
+{
+  "f1": {
+    "body": [
+      {
+        "text": "std::process::abort();"
+      }
+    ]
+  }
+}
