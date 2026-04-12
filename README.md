@@ -51,12 +51,6 @@ ninja
 ninja check
 ```
 
-If any change was made to the translation rules, regenerate the IR with:
-
-```bash
-ninja gen-rules
-```
-
 
 ## Run
 
@@ -138,6 +132,9 @@ ninja check-benchmarks
 
 # Check benchmark output without executing binaries
 SKIP_RUN=1 ninja check-benchmarks
+
+# Regenerate and check if the IR for the rules changed
+ninja check-rules
 
 # Regenerate expected output for unit tests after intentional changes
 REPLACE_EXPECTED=1 ninja check-unit

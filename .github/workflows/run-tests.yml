@@ -9,12 +9,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         build_type: [Debug, Release]
-        test:
-          - name: unit-tests
-            target: check
-          - name: benchmarks (skip-run)
-            target: check-benchmarks
-            skip_run: "1"
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.test.name }} (${{ matrix.os }}, ${{ matrix.build_type }})
@@ -53,8 +47,16 @@ jobs:
         run: ninja
         working-directory: build
 
-      - name: Run tests
-        run: ninja ${{ matrix.test.target }}
+      - name: Run unit tests
+        run: ninja check
+        working-directory: build
+
+      - name: Check rules
+        run: ninja check-rules
+        working-directory: build
+
+      - name: Check benchmarks (don't run)
+        run: ninja check-benchmarks
         working-directory: build
         env:
-          SKIP_RUN: ${{ matrix.test.skip_run }}
+          SKIP_RUN: 1

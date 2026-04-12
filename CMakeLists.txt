@@ -138,17 +138,15 @@ add_custom_target("check"
                   DEPENDS check-libcc2rs check-unit
                  )
 
-add_custom_target("gen-rules"
+add_custom_target("check-rules"
                   COMMAND find ${PROJECT_SOURCE_DIR}/rules -name "ir*.json" -delete
                   COMMAND cargo build
                   COMMAND ${CMAKE_COMMAND} -E chdir ${PROJECT_SOURCE_DIR}/rule-preprocessor
                           ${CMAKE_COMMAND} -E env
                               CARGO_TARGET_DIR=${PROJECT_SOURCE_DIR}/rule-preprocessor/target
-                              cargo clean
-                  COMMAND ${CMAKE_COMMAND} -E chdir ${PROJECT_SOURCE_DIR}/rule-preprocessor
-                          ${CMAKE_COMMAND} -E env
-                              CARGO_TARGET_DIR=${PROJECT_SOURCE_DIR}/rule-preprocessor/target
                               cargo run
+                  COMMAND ${CMAKE_COMMAND} -E chdir ${PROJECT_SOURCE_DIR}
+                          git diff --exit-code -- rules/
                   WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/rules"
                   DEPENDS install-rust-toolchain
                   USES_TERMINAL

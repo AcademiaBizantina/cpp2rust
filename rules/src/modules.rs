@@ -1,6 +1,3 @@
-// Copyright (c) 2022-present INESC-ID.
-// Distributed under the MIT license that can be found in the LICENSE file.
-
 #[path = r#"../algorithm/tgt_refcount.rs"#]
 pub mod algorithm_tgt_refcount;
 #[path = r#"../algorithm/tgt_unsafe.rs"#]
