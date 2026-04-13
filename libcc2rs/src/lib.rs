@@ -24,3 +24,6 @@ pub use iterators::*;
 
 mod compat;
 pub use compat::*;
+
+mod va_args;
+pub use va_args::*;

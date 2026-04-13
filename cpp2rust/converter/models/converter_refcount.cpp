@@ -172,6 +172,11 @@ bool ConverterRefCount::VisitPointerType(clang::PointerType *type) {
     return false;
   }
 
+  if (IsVaListType(ctx_, clang::QualType(type, 0))) {
+    StrCat("VaList");
+    return false;
+  }
+
   if (type->isVoidPointerType()) {
     StrCat("AnyPtr");
     return false;
@@ -470,6 +475,17 @@ void ConverterRefCount::EmitFunctionPreamble(clang::FunctionDecl *decl) {
              token::kSemiColon);
     }
   }
+}
+
+void ConverterRefCount::ConvertVaListVarDecl(clang::VarDecl *decl) {
+  if (clang::isa<clang::ParmVarDecl>(decl)) {
+    // va_list parameter (decayed to __va_list_tag *)
+  } else {
+    // va_list local variable
+    StrCat(keyword::kLet);
+  }
+
+  StrCat(GetNamedDeclAsString(decl), token::kColon, "Value<VaList>");
 }
 
 bool ConverterRefCount::ConvertLambdaVarDecl(clang::VarDecl *decl) {
@@ -775,6 +791,11 @@ void ConverterRefCount::ConvertPrintf(clang::CallExpr *expr) {
 }
 
 bool ConverterRefCount::VisitCallExpr(clang::CallExpr *expr) {
+  if (IsBuiltinVaStart(expr) || IsBuiltinVaEnd(expr) || IsBuiltinVaCopy(expr)) {
+    ConvertVAArgCall(expr);
+    return false;
+  }
+
   if (expr->isCallToStdMove()) {
     if (IsUniquePtr(expr->getArg(0)->getType())) {
       StrCat(std::format("{}.take()", ConvertLValue(expr->getArg(0))));
@@ -912,6 +933,10 @@ bool ConverterRefCount::VisitImplicitCastExpr(clang::ImplicitCastExpr *expr) {
   }
 
   if (expr->getCastKind() == clang::CastKind::CK_ArrayToPointerDecay) {
+    if (IsVaListType(ctx_, sub_expr->getType())) {
+      Convert(sub_expr);
+      return false;
+    }
     if (clang::isa<clang::StringLiteral>(sub_expr) ||
         clang::isa<clang::PredefinedExpr>(sub_expr)) {
       StrCat(std::format("Ptr::from_string_literal({})", ToString(sub_expr)));
@@ -1366,6 +1391,18 @@ bool ConverterRefCount::VisitImplicitValueInitExpr(
   return Converter::VisitImplicitValueInitExpr(expr);
 }
 
+bool ConverterRefCount::VisitVAArgExpr(clang::VAArgExpr *expr) {
+  auto va_list_expr = expr->getSubExpr();
+  if (auto *cast = clang::dyn_cast<clang::ImplicitCastExpr>(va_list_expr)) {
+    va_list_expr = cast->getSubExpr();
+  }
+  StrCat(ConvertLValue(va_list_expr));
+  StrCat(".arg::<");
+  StrCat(GetUnsafeTypeAsString(expr->getType()));
+  StrCat(">()");
+  return false;
+}
+
 bool ConverterRefCount::VisitCXXDefaultArgExpr(clang::CXXDefaultArgExpr *expr) {
   return Converter::VisitCXXDefaultArgExpr(expr);
 }
@@ -1569,9 +1606,14 @@ void ConverterRefCount::ConvertGenericBinaryOperator(
   auto sides_contain_ptr_or_deref = std::ranges::any_of(rhs_vars, predicate) ||
                                     std::ranges::any_of(lhs_vars, predicate);
 
-  auto may_cause_borrow_mut_err = !sides_contains_literal &&
-                                  !same_var_on_both_sides &&
-                                  sides_contain_ptr_or_deref;
+  auto both_sides_have_va_arg = same_var_on_both_sides &&
+                                ContainsVAArgExpr(lhs) &&
+                                ContainsVAArgExpr(rhs);
+
+  auto may_cause_borrow_mut_err =
+      both_sides_have_va_arg ||
+      (!sides_contains_literal && !same_var_on_both_sides &&
+       sides_contain_ptr_or_deref);
 
   if (may_cause_borrow_mut_err) {
     StrCat(std::format("{{ let _lhs = {}; _lhs {} {} }}",

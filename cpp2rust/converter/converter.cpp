@@ -243,11 +243,16 @@ bool Converter::VisitPointerType(clang::PointerType *type) {
     return false;
   }
 
+  if (IsVaListType(ctx_, clang::QualType(type, 0))) {
+    StrCat("VaList");
+    return false;
+  }
+
   StrCat(token::kStar);
   auto pointee_type = type->getPointeeType();
   StrCat(pointee_type.isConstQualified() ? keyword::kConst : keyword_mut_);
   if (pointee_type->isRecordType() &&
-      abstract_structs_.contains(GetID(pointee_type->getAsCXXRecordDecl()))) {
+      abstract_structs_.contains(GetID(pointee_type->getAsRecordDecl()))) {
     StrCat(keyword::kDyn);
   }
   return Convert(pointee_type);
@@ -352,9 +357,25 @@ bool Converter::VisitFunctionTemplateDecl(clang::FunctionTemplateDecl *decl) {
   return false;
 }
 
+void Converter::ConvertVaListVarDecl(clang::VarDecl *decl) {
+  if (clang::isa<clang::ParmVarDecl>(decl)) {
+    // va_list parameter (decayed to __va_list_tag *)
+  } else {
+    // va_list local variable
+    StrCat(keyword::kLet);
+  }
+  StrCat(keyword_mut_, GetNamedDeclAsString(decl), token::kColon, "VaList");
+}
+
 bool Converter::ConvertVarDeclSkipInit(clang::VarDecl *decl) {
   auto qual_type = decl->getType();
   auto name = GetNamedDeclAsString(decl);
+
+  if (IsVaListType(ctx_, qual_type) && decl->isLocalVarDecl()) {
+    ConvertVaListVarDecl(decl);
+    return true;
+  }
+
   if (decl->isFileVarDecl()) {
     name = std::regex_replace(Mapper::ToString(decl), std::regex("::"), "_");
     if ((decl->isExternallyDeclarable() && !decl->hasInit()) ||
@@ -1259,7 +1280,28 @@ std::optional<std::string> Converter::TryPluginConvert(clang::CallExpr *call) {
   return std::nullopt;
 }
 
+void Converter::ConvertVAArgCall(clang::CallExpr *expr) {
+  if (IsBuiltinVaStart(expr)) {
+    StrCat(ToString(expr->getArg(0)->IgnoreImpCasts()), "= VaList::new(args)");
+    return;
+  }
+  if (IsBuiltinVaEnd(expr)) {
+    // va_end is a no-op
+    return;
+  }
+  if (IsBuiltinVaCopy(expr)) {
+    StrCat(ToString(expr->getArg(0)->IgnoreImpCasts()), "=",
+           ToString(expr->getArg(1)->IgnoreImpCasts()), ".clone()");
+    return;
+  }
+}
+
 bool Converter::VisitCallExpr(clang::CallExpr *expr) {
+  if (IsBuiltinVaStart(expr) || IsBuiltinVaEnd(expr) || IsBuiltinVaCopy(expr)) {
+    ConvertVAArgCall(expr);
+    return false;
+  }
+
   if (auto plugin_str = TryPluginConvert(expr)) {
     StrCat(*plugin_str);
     return false;
@@ -1356,11 +1398,16 @@ void Converter::ConvertGenericCallExpr(clang::CallExpr *expr) {
          "Either function decl or function prototype should be known");
 
   auto num_args = expr->getNumArgs() - arg_begin;
+  bool is_variadic =
+      function ? function->isVariadic() : (proto && proto->isVariadic());
+  unsigned num_named_params = function
+                                  ? function->getNumParams()
+                                  : (proto ? proto->getNumParams() : num_args);
 
   // Track which args are materialized temps bound to reference params
   std::vector<std::string> temp_refs(num_args);
 
-  for (unsigned i = 0; i < num_args; ++i) {
+  for (unsigned i = 0; i < num_named_params && i < num_args; ++i) {
     auto *arg = expr->getArg(i + arg_begin);
     std::string param_name = function
                                  ? function->getParamDecl(i)->getNameAsString()
@@ -1387,7 +1434,7 @@ void Converter::ConvertGenericCallExpr(clang::CallExpr *expr) {
 
   Convert(callee);
   StrCat(token::kOpenParen);
-  for (unsigned i = 0; i < num_args; ++i) {
+  for (unsigned i = 0; i < num_named_params && i < num_args; ++i) {
     auto *arg = expr->getArg(i + arg_begin);
     std::string param_name = function
                                  ? function->getParamDecl(i)->getNameAsString()
@@ -1412,6 +1459,18 @@ void Converter::ConvertGenericCallExpr(clang::CallExpr *expr) {
     }
     StrCat(token::kComma);
   }
+
+  // Variadic args: wrap in &[arg.into(), ...]
+  if (is_variadic) {
+    StrCat("& [");
+    for (unsigned i = num_named_params; i < num_args; ++i) {
+      auto *arg = expr->getArg(i + arg_begin);
+      Convert(arg);
+      StrCat(".into()", token::kComma);
+    }
+    StrCat("]");
+  }
+
   StrCat(token::kCloseParen);
   StrCat(token::kCloseCurlyBracket);
   StrCat(token::kCloseParen);
@@ -1560,6 +1619,11 @@ bool Converter::VisitImplicitCastExpr(clang::ImplicitCastExpr *expr) {
     if (clang::isa<clang::StringLiteral>(sub_expr) ||
         clang::isa<clang::PredefinedExpr>(sub_expr)) {
       return Convert(sub_expr);
+    }
+    // __va_list_tag [1] decays to __va_list_tag *. Just pass through by value
+    if (IsVaListType(ctx_, sub_expr->getType())) {
+      Convert(sub_expr);
+      break;
     }
     Convert(sub_expr);
     if (sub_expr->getType().isConstQualified()) {
@@ -2209,6 +2273,18 @@ bool Converter::VisitCXXNullPtrLiteralExpr(clang::CXXNullPtrLiteralExpr *expr) {
   return false;
 }
 
+bool Converter::VisitVAArgExpr(clang::VAArgExpr *expr) {
+  auto va_list_expr = expr->getSubExpr();
+  if (auto *cast = clang::dyn_cast<clang::ImplicitCastExpr>(va_list_expr)) {
+    va_list_expr = cast->getSubExpr();
+  }
+  Convert(va_list_expr);
+  StrCat(".arg::<");
+  Convert(expr->getType());
+  StrCat(">()");
+  return false;
+}
+
 bool Converter::VisitGNUNullExpr(clang::GNUNullExpr *expr) {
   StrCat(keyword_default_);
   computed_expr_type_ = ComputedExprType::FreshPointer;
@@ -2806,6 +2882,9 @@ void Converter::ConvertFunctionParameters(clang::FunctionDecl *decl) {
   for (auto *parameter : definition->parameters()) {
     ConvertVarDeclSkipInit(parameter);
     StrCat(token::kComma);
+  }
+  if (decl->isVariadic()) {
+    StrCat("args: &[VaArg]", token::kComma);
   }
   in_function_formals_ = false;
 }

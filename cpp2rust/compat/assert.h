@@ -5,6 +5,10 @@
 
 #undef assert
 
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
 void __cpp2rust_assert_fail(bool condition) __attribute__((noreturn));
 
 #define assert(expr) __cpp2rust_assert_fail(expr)

@@ -253,6 +253,7 @@ unsigned GetArraySize(clang::QualType array_type) {
 }
 
 std::string GetID(const clang::Decl *decl) {
+  assert(decl);
   const auto file_name = GetFileName(decl);
   const auto line_num = GetLineNumber(decl);
   const auto column_num = GetColumnNumber(decl);
@@ -555,6 +556,60 @@ bool IsRedundantCopyInConversion(clang::ASTContext &ctx,
   }
   auto *parent = parents[0].get<clang::CXXConstructExpr>();
   return parent && parent->getConstructor()->isConvertingConstructor(false);
+}
+
+// va_list is implemented as __va_list_tag[1] and decays to __va_list_tag *.
+// That's because va_list must have pointer semantics, but still be passed as
+// value by user code.
+bool IsVaListType(clang::ASTContext &ctx, clang::QualType type) {
+  auto canonical = type.getCanonicalType();
+  auto va_list = ctx.getBuiltinVaListType().getCanonicalType();
+
+  // Direct match: va_list itself
+  if (canonical == va_list) {
+    return true;
+  }
+
+  // Decayed match: __va_list_tag[1] decays to __va_list_tag *
+  if (auto *arr = clang::dyn_cast<clang::ConstantArrayType>(va_list)) {
+    return canonical ==
+           ctx.getPointerType(arr->getElementType()).getCanonicalType();
+  }
+
+  return false;
+}
+
+bool IsBuiltinVaStart(const clang::CallExpr *expr) {
+  if (auto *fn = expr->getDirectCallee()) {
+    return fn->getBuiltinID() == clang::Builtin::BI__builtin_va_start;
+  }
+  return false;
+}
+
+bool IsBuiltinVaEnd(const clang::CallExpr *expr) {
+  if (auto *fn = expr->getDirectCallee()) {
+    return fn->getBuiltinID() == clang::Builtin::BI__builtin_va_end;
+  }
+  return false;
+}
+
+bool IsBuiltinVaCopy(const clang::CallExpr *expr) {
+  if (auto *fn = expr->getDirectCallee()) {
+    return fn->getBuiltinID() == clang::Builtin::BI__builtin_va_copy;
+  }
+  return false;
+}
+
+bool ContainsVAArgExpr(const clang::Stmt *stmt) {
+  if (clang::isa<clang::VAArgExpr>(stmt)) {
+    return true;
+  }
+  for (auto *child : stmt->children()) {
+    if (ContainsVAArgExpr(child)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace cpp2rust
