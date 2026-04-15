@@ -386,75 +386,35 @@ decltype(types_)::const_iterator search(clang::QualType qual_type) {
   llvm::errs() << "search type " << type << ", result: "
                << ((result == types_.end()) ? "None"
                                             : result->second.type_info.type)
-               << "\n";
+               << '\n';
   return result;
 }
 
 void addRulesFromDirectory(const std::filesystem::path &dir, Model model) {
   std::vector<std::filesystem::path> paths;
   for (const auto &entry : std::filesystem::recursive_directory_iterator(dir)) {
-    if (entry.is_regular_file() && entry.path().extension() == ".cpp") {
-      paths.push_back(entry.path());
-    }
-  }
-
-  if (paths.empty()) {
-    llvm::errs() << "Warning: no rules in " << dir << "\n";
-    return;
-  }
-
-  const unsigned hw = std::max(1u, std::thread::hardware_concurrency());
-  const unsigned nthreads = std::min(hw, static_cast<unsigned>(paths.size()));
-  std::atomic<size_t> next{0};
-
-  std::vector<std::vector<TranslationRule::Rule>> buckets(nthreads);
-
-  auto worker = [&](unsigned tid) {
-    auto &local = buckets[tid];
-
-    while (true) {
-      size_t i = next.fetch_add(1, std::memory_order_relaxed);
-      if (i >= paths.size()) {
-        break;
-      }
-
-      auto rules = TranslationRule::Load(paths[i], model);
+    auto &path = entry.path();
+    if (entry.is_regular_file() && path.extension() == ".cpp") {
+      auto rules = TranslationRule::Load(path, model);
       if (rules.empty()) {
-        llvm::errs() << "No rules found in " << paths[i] << "\n";
-        break;
+        llvm::errs() << "No rules found in " << path << '\n';
+        continue;
       }
-
       for (auto &rule : rules) {
-        local.push_back(std::move(rule));
-      }
-    }
-  };
-
-  {
-    llvm::DefaultThreadPool pool(
-        llvm::heavyweight_hardware_concurrency(nthreads));
-    for (unsigned t = 0; t < nthreads; ++t)
-      pool.async(worker, t);
-    pool.wait();
-  }
-
-  for (auto &bucket : buckets) {
-    for (auto &rule : bucket) {
-      if (auto *expr = std::get_if<TranslationRule::ExprTgt>(&rule.tgt)) {
-        if (exprs_.contains(rule.src)) {
-          llvm::errs() << "Key: " << rule.src << ", added from "
-                       << rule.src_path << " already exists in exprs_\n";
-          assert(0);
+        if (auto *expr = std::get_if<TranslationRule::ExprTgt>(&rule.tgt)) {
+          if (!exprs_.try_emplace(std::move(rule.src), std::move(*expr))
+                   .second) {
+            llvm::errs() << "Key: " << rule.src << " already exists in exprs\n";
+            assert(0);
+          }
+        } else if (auto *type =
+                       std::get_if<TranslationRule::TypeTgt>(&rule.tgt)) {
+          if (!types_.try_emplace(std::move(rule.src), std::move(*type))
+                   .second) {
+            llvm::errs() << "Key: " << rule.src << " already exists in types\n";
+            assert(0);
+          }
         }
-        exprs_[rule.src] = std::move(*expr);
-      } else if (auto *type =
-                     std::get_if<TranslationRule::TypeTgt>(&rule.tgt)) {
-        if (types_.contains(rule.src)) {
-          llvm::errs() << "Key: " << rule.src << ", added from "
-                       << rule.src_path << " already exists in types_\n";
-          assert(0);
-        }
-        types_[rule.src] = *type;
       }
     }
   }
@@ -574,7 +534,7 @@ std::string mapTypeStringRecursive(const std::string &cpp_type) {
   auto rule = parallel_search(
       types_, [&](std::string tpl) { return matchTemplate(tpl, cpp_type); });
   if (rule == types_.end()) {
-    llvm::errs() << "cpp_type: " << cpp_type << "\n";
+    llvm::errs() << "cpp_type: " << cpp_type << '\n';
     assert(0 && "Type is not present in types_");
   }
   auto subs = matchTemplate(rule->first, cpp_type).value();
@@ -893,11 +853,11 @@ void LoadTranslationRules(Model model, clang::ASTContext &ctx,
   addBuiltinTypes(model);
 
   for (auto &[src, expr] : exprs_) {
-    llvm::errs() << "Expr: " << src << "\n";
+    llvm::errs() << "Expr: " << src << '\n';
     expr.dump();
   }
   for (auto &[src, type_tgt] : types_) {
-    llvm::errs() << "Type: " << src << "\n";
+    llvm::errs() << "Type: " << src << '\n';
     type_tgt.dump();
   }
 }

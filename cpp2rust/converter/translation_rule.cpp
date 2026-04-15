@@ -185,7 +185,7 @@ Access ParseAccessJSON(llvm::StringRef value) {
   } else if (value == "move") {
     return Access::kMove;
   } else {
-    llvm::errs() << "Invalid access value: " << value << "\n";
+    llvm::errs() << "Invalid access value: " << value << '\n';
     assert(0);
     return Access::kRead;
   }
@@ -279,23 +279,16 @@ TypeTgt ParseTypeTgtJSON(const llvm::json::Object &obj) {
 RuleMap LoadSrc(const std::filesystem::path &src_path) {
   clang::tooling::FixedCompilationDatabase compilations(
       ".", getPlatformClangFlags());
-  std::vector<std::string> sources = {src_path.string()};
-
   RuleMap out;
   ActionFactory factory(out);
-  clang::tooling::ClangTool tool(compilations, sources);
+  clang::tooling::ClangTool tool(compilations, {src_path.string()});
   tool.run(&factory);
 
   if (out.empty()) {
     llvm::errs() << "Warning: no symbols found in return statements for file: "
-                 << src_path << "\n";
+                 << src_path << '\n';
     return out;
   }
-
-  for (auto &[name, rule] : out) {
-    rule.src_path = src_path;
-  }
-
   return out;
 }
 
@@ -309,7 +302,7 @@ RuleMap LoadTgtFromIR(const std::filesystem::path &json_path) {
   auto parsed = llvm::json::parse((*buf)->getBuffer());
   if (!parsed) {
     llvm::errs() << "Failed to parse IR JSON: " << json_path << ": "
-                 << llvm::toString(parsed.takeError()) << "\n";
+                 << llvm::toString(parsed.takeError()) << '\n';
     assert(0);
     return out;
   }
@@ -360,7 +353,7 @@ void ValidateConsecutiveKeys(const Map &map, char prefix, int start,
       for (auto idx : indices) {
         llvm::errs() << " " << prefix << idx;
       }
-      llvm::errs() << "\n";
+      llvm::errs() << '\n';
       assert(0 && "indices must be consecutive");
     }
   }
@@ -389,13 +382,15 @@ void PlaceholderFragment::dump() const {
   llvm::errs() << "  placeholder: " << arg << " (";
   switch (access) {
   case Access::kRead:
-    llvm::errs() << "read";
+    llvm::errs() << "read\n";
+    break;
   case Access::kWrite:
-    llvm::errs() << "write";
+    llvm::errs() << "write\n";
+    break;
   case Access::kMove:
-    llvm::errs() << "move";
+    llvm::errs() << "move\n";
+    break;
   }
-  llvm::errs() << "\n";
 }
 
 const PlaceholderFragment *MethodCallFragment::getReceiverPlaceholder() const {
@@ -408,8 +403,8 @@ const PlaceholderFragment *MethodCallFragment::getReceiverPlaceholder() const {
 }
 
 void MethodCallFragment::dump() const {
-  llvm::errs() << "  method_call:\n";
-  llvm::errs() << "    receiver:\n";
+  llvm::errs() << "  method_call:\n"
+                  "    receiver:\n";
   for (const auto &frag : receiver) {
     BodyFragmentDump(frag);
   }
@@ -423,19 +418,19 @@ void ExprTgt::dump() const {
   for (auto &[name, info] : params) {
     llvm::errs() << "  param " << name << ": ";
     info.dump();
-    llvm::errs() << "\n";
+    llvm::errs() << '\n';
   }
   if (!return_type.type.empty()) {
     llvm::errs() << "  return: ";
     return_type.dump();
-    llvm::errs() << "\n";
+    llvm::errs() << '\n';
   }
   for (auto &[name, bounds] : generics) {
     llvm::errs() << "  generic " << name << ":";
     for (auto &b : bounds) {
       llvm::errs() << " " << b;
     }
-    llvm::errs() << "\n";
+    llvm::errs() << '\n';
   }
   for (const auto &frag : body) {
     BodyFragmentDump(frag);
@@ -443,7 +438,7 @@ void ExprTgt::dump() const {
 }
 
 void GenericFragment::dump() const {
-  llvm::errs() << "  generic: " << name << "\n";
+  llvm::errs() << "  generic: " << name << '\n';
 }
 
 void TypeInfo::dump() const {
@@ -457,9 +452,9 @@ void TypeInfo::dump() const {
 void TypeTgt::dump() const {
   llvm::errs() << "  type: ";
   type_info.dump();
-  llvm::errs() << "\n";
+  llvm::errs() << '\n';
   if (!initializer.empty()) {
-    llvm::errs() << "  init: " << initializer << "\n";
+    llvm::errs() << "  init: " << initializer << '\n';
   }
 }
 
@@ -488,10 +483,7 @@ std::vector<Rule> Load(const std::filesystem::path &path, Model model) {
     return {};
   }
   for (auto &[name, src_rule] : src_rules) {
-    auto it = rules.find(name);
-    assert(it != rules.end() && "Source symbol should have a target");
-    it->second.src = std::move(src_rule.src);
-    it->second.src_path = std::move(src_rule.src_path);
+    rules.at(name).src = std::move(src_rule.src);
   }
 
   std::vector<Rule> result;

@@ -92,7 +92,6 @@ struct TypeTgt {
 struct Rule {
   std::string src;
   std::variant<ExprTgt, TypeTgt> tgt;
-  std::filesystem::path src_path;
 };
 
 std::vector<Rule> Load(const std::filesystem::path &path, Model model);
