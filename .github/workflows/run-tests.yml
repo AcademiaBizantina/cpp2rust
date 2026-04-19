@@ -29,11 +29,12 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.94.0
+          components: rustfmt
 
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          cache: 'pip'
+          python-version: '3.x'
 
       - name: Install Python dependencies
         run: pip install tomli
