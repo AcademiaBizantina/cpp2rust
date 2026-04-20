@@ -61,7 +61,11 @@ public:
 
   virtual bool VisitPointerType(clang::PointerType *type);
 
-  void ConvertFunctionPointerType(clang::PointerType *type);
+  enum class FnProtoType { LambdaCallOperator, FnPtr };
+
+  virtual std::string
+  ConvertFunctionPointerType(const clang::FunctionProtoType *proto,
+                             FnProtoType kind = FnProtoType::FnPtr);
 
   virtual bool VisitDecayedType(clang::DecayedType *type);
 
@@ -201,6 +205,11 @@ public:
 
   void ConvertGenericCallExpr(clang::CallExpr *expr);
 
+  virtual void EmitFnPtrCall(clang::Expr *callee);
+
+  virtual void
+  ConvertFunctionToFunctionPointer(const clang::FunctionDecl *fn_decl);
+
   virtual void ConvertPrintf(clang::CallExpr *expr);
 
   void ConvertVAArgCall(clang::CallExpr *expr);
@@ -333,8 +342,6 @@ protected:
   virtual bool Convert(clang::Decl *decl);
   virtual bool Convert(clang::Stmt *stmt);
   virtual bool Convert(clang::Expr *expr);
-
-  std::string GetFunctionPointerDefaultAsString(clang::QualType qual_type);
 
   virtual std::string GetDefaultAsString(clang::QualType qual_type);
 
@@ -472,6 +479,7 @@ protected:
   static std::unordered_set<std::string> abstract_structs_;
 
   enum class ExprKind : uint8_t {
+    Callee,
     LValue,
     RValue,
     XValue,
@@ -482,6 +490,8 @@ protected:
 
   static const char *expr_kind_to_string(ExprKind kind) {
     switch (kind) {
+    case ExprKind::Callee:
+      return "Callee";
     case ExprKind::LValue:
       return "LValue";
     case ExprKind::RValue:
@@ -505,6 +515,7 @@ protected:
   bool isAddrOf() const;
   bool isObject() const;
   bool isVoid() const;
+  bool isCallee() const;
 
   void dump_expr_kinds();
 
