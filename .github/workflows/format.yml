@@ -12,13 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup LLVM 22
+      - name: Setup LLVM
         uses: ZhongRuoyu/setup-llvm@v0
         with:
           llvm-version: 22
@@ -38,23 +37,11 @@ jobs:
       - name: Apply C++ formatting fixes
         run: find cpp2rust tests -name '*.cpp' -o -name '*.h' -o -name '*.c' | xargs clang-format -i
 
-      - name: Suggest C++ formatting fixes
-        if: github.event_name == 'pull_request'
-        uses: reviewdog/action-suggester@v1
-        with:
-          tool_name: clang-format
-
       - name: Apply Rust lint fixes
         run: |
           cargo clippy --fix --allow-dirty --manifest-path rules/Cargo.toml --all-targets
           cargo +nightly clippy --fix --allow-dirty --manifest-path rule-preprocessor/Cargo.toml --all-targets
           cargo clippy --fix --allow-dirty --manifest-path libcc2rs/Cargo.toml --all-targets
-
-      - name: Suggest Rust lint fixes
-        if: github.event_name == 'pull_request'
-        uses: reviewdog/action-suggester@v1
-        with:
-          tool_name: clippy
 
       - name: Apply Rust formatting fixes
         run: |
@@ -63,11 +50,29 @@ jobs:
           cargo fmt --manifest-path libcc2rs/Cargo.toml
           find tests -name '*.rs' -print0 | xargs -0 rustfmt
 
-      - name: Suggest Rust formatting fixes
+      - name: Capture diff for later auto-commit
+        id: diff
         if: github.event_name == 'pull_request'
-        uses: reviewdog/action-suggester@v1
+        run: |
+          git diff > /tmp/format.diff
+          echo "${{ github.event.pull_request.head.repo.full_name }}" > /tmp/head-repo.txt
+          echo "${{ github.event.pull_request.head.ref }}" > /tmp/head-branch.txt
+          if [ -s /tmp/format.diff ]; then
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload diff artifact
+        if: github.event_name == 'pull_request' && steps.diff.outputs.has_diff == 'true'
+        uses: actions/upload-artifact@v4
         with:
-          tool_name: rustfmt
+          name: format-diff
+          path: |
+            /tmp/format.diff
+            /tmp/head-repo.txt
+            /tmp/head-branch.txt
+          retention-days: 1
 
       - name: Check C++ formatting
         run: find cpp2rust tests -name '*.cpp' -o -name '*.h' -o -name '*.c' | xargs clang-format --dry-run --Werror

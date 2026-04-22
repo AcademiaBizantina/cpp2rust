@@ -1,0 +1,42 @@
+name: Format Apply
+
+on:
+  workflow_run:
+    workflows: ["Format Check"]
+    types: [completed]
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'pull_request'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download diff artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: format-diff
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read PR head
+        id: head
+        run: |
+          echo "repo=$(cat head-repo.txt)" >> "$GITHUB_OUTPUT"
+          echo "branch=$(cat head-branch.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout PR head
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.head.outputs.repo }}
+          ref: ${{ steps.head.outputs.branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Apply diff
+        run: git apply $GITHUB_WORKSPACE/../format.diff
+
+      - name: Commit and push
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Automatically apply formatting and lint fixes"
